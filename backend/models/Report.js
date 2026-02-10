@@ -1,9 +1,10 @@
-import mongoose from "mongoose";
+// models/Report.js
+import { DataTypes } from "sequelize";
+import sequelize from "../config/db.js";
 
-const reportSchema = new mongoose.Schema({
-  title: String,
-  description: String,
-  createdAt: { type: Date, default: Date.now },
+const Report = sequelize.define("Report", {
+  title: DataTypes.STRING,
+  description: DataTypes.TEXT,
 });
 
-export default mongoose.model("Report", reportSchema);
+export default Report;

@@ -1,12 +1,11 @@
-import mongoose from "mongoose";
+// models/Stock.js
+import { DataTypes } from "sequelize";
+import sequelize from "../config/db.js";
 
-const stockSchema = new mongoose.Schema(
-  {
-    itemName: { type: String, required: true },
-    quantity: { type: Number, required: true },
-    price: { type: Number, required: true }
-  },
-  { timestamps: true }
-);
+const Stock = sequelize.define("Stock", {
+  itemName: DataTypes.STRING,
+  quantity: DataTypes.INTEGER,
+  price: DataTypes.FLOAT,
+});
 
-export default mongoose.model("Stock", stockSchema);
+export default Stock;

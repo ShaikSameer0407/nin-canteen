@@ -11,18 +11,18 @@ export default function MenuTable({ menu, onDelete, onToggle }) {
       </thead>
       <tbody>
         {menu.map((m) => (
-          <tr key={m._id}>
+          <tr key={m.id}>
             <td>{m.name}</td>
             <td>₹{m.price}</td>
             <td>
               <input
                 type="checkbox"
                 checked={m.isAvailable}
-                onChange={(e) => onToggle(m._id, e.target.checked)}
+                onChange={(e) => onToggle(m.id, e.target.checked)}
               />
             </td>
             <td>
-              <button onClick={() => onDelete(m._id)}>Delete</button>
+              <button onClick={() => onDelete(m.id)}>Delete</button>
             </td>
           </tr>
         ))}

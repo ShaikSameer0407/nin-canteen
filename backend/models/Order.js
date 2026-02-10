@@ -1,10 +1,24 @@
-import mongoose from "mongoose";
+// models/Order.js
+import { DataTypes } from "sequelize";
+import sequelize from "../config/db.js";
 
-const orderSchema = new mongoose.Schema({
-  items: Array,
-  totalAmount: Number,
-  user: String,
-  createdAt: { type: Date, default: Date.now },
+const Order = sequelize.define("Order", {
+  items: {
+    type: DataTypes.JSONB,
+    allowNull: false,
+    defaultValue: [],     // ✅ IMPORTANT
+  },
+  totalAmount: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  user: DataTypes.STRING,
+  paymentId: DataTypes.STRING,
+  status: {
+    type: DataTypes.STRING,
+    defaultValue: "pending",
+  },
 });
 
-export default mongoose.model("Order", orderSchema);
+export default Order;

@@ -15,8 +15,12 @@ import AdminReports from "./pages/admin/AdminReports";
 import UserDashboard from "./pages/UserDashboard";
 import Checkout from "./pages/Checkout";
 
+/* COUNTER */
+import CounterPanel from "./pages/counter/CounterPanel";
+
 /* PAYMENT */
 import PaymentSuccess from "./components/PaymentSuccess";
+import PaymentReceipt from "./pages/PaymentReceipt";
 
 /* ================= AUTH HELPER ================= */
 const getAuth = () => ({
@@ -29,8 +33,7 @@ function Protected({ roleRequired, children }) {
   const { token, role } = getAuth();
 
   if (!token) return <Navigate to="/" replace />;
-  if (roleRequired && role !== roleRequired)
-    return <Navigate to="/" replace />;
+  if (roleRequired && role !== roleRequired) return <Navigate to="/" replace />;
 
   return children;
 }
@@ -40,6 +43,7 @@ export default function App() {
     <Routes>
       {/* AUTH */}
       <Route path="/" element={<LoginRedirect />} />
+      <Route path="/login" element={<LoginRedirect />} />
       <Route path="/register" element={<RegisterRedirect />} />
 
       {/* ADMIN */}
@@ -57,7 +61,7 @@ export default function App() {
         <Route path="reports" element={<AdminReports />} />
       </Route>
 
-      {/* USER DASHBOARD */}
+      {/* USER */}
       <Route
         path="/user"
         element={
@@ -77,12 +81,31 @@ export default function App() {
         }
       />
 
-      {/* ✅ PAYMENT SUCCESS */}
+      {/* PAYMENT FLOW */}
       <Route
         path="/payment-success"
         element={
           <Protected roleRequired="user">
             <PaymentSuccess />
+          </Protected>
+        }
+      />
+
+      <Route
+        path="/payment-receipt"
+        element={
+          <Protected roleRequired="user">
+            <PaymentReceipt />
+          </Protected>
+        }
+      />
+
+      {/* COUNTER PANEL */}
+      <Route
+        path="/counter"
+        element={
+          <Protected roleRequired="counter">
+            <CounterPanel />
           </Protected>
         }
       />
@@ -97,22 +120,20 @@ export default function App() {
 
 function LoginRedirect() {
   const { token, role } = getAuth();
+
   if (!token) return <Login />;
 
-  return role === "admin" ? (
-    <Navigate to="/admin" replace />
-  ) : (
-    <Navigate to="/user" replace />
-  );
+  if (role === "admin") return <Navigate to="/admin" replace />;
+  if (role === "counter") return <Navigate to="/counter" replace />;
+  return <Navigate to="/user" replace />;
 }
 
 function RegisterRedirect() {
   const { token, role } = getAuth();
+
   if (!token) return <Register />;
 
-  return role === "admin" ? (
-    <Navigate to="/admin" replace />
-  ) : (
-    <Navigate to="/user" replace />
-  );
+  if (role === "admin") return <Navigate to="/admin" replace />;
+  if (role === "counter") return <Navigate to="/counter" replace />;
+  return <Navigate to="/user" replace />;
 }

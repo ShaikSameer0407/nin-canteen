@@ -1,176 +1,188 @@
 import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { api } from "../../api/api";
 
+/* ----------------- Small UI Pieces ----------------- */
+function StatCard({ title, value, icon }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3"
+    >
+      <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+        {icon}
+      </div>
+      <div>
+        <p className="text-xs text-gray-400">{title}</p>
+        <h3 className="text-xl font-semibold">{value}</h3>
+      </div>
+    </motion.div>
+  );
+}
+
+function Section({ title, children }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 py-2 font-semibold">
+        {title}
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+/* ----------------- MAIN ----------------- */
 export default function AdminDashboard() {
   const [menu, setMenu] = useState([]);
   const [stats, setStats] = useState({
-    totalSales: 0,
     totalOrders: 0,
     totalRevenue: 0,
+    breakfast: 0,
+    lunch: 0,
+    snacks: 0,
   });
+  const [orders, setOrders] = useState([]);
+  const token = localStorage.getItem("token");
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  /* FETCH MENU */
+  /* -------- API -------- */
   const fetchMenu = async () => {
     const res = await api.get("/menu");
-    setMenu(res.data);
+    setMenu(Array.isArray(res.data) ? res.data : []);
   };
 
-  /* FETCH STATS */
   const fetchStats = async () => {
-    const res = await api.get("/orders/stats");
-    setStats(res.data);
+    const res = await api.get("/orders/stats", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setStats(res.data || {});
   };
 
-  /* TOGGLE ITEM STATUS */
-  const toggleStatus = async (id, value) => {
-    await api.put(`/menu/${id}`, { isAvailable: value });
-    fetchMenu();
-  };
-
-  /* DELETE ITEM */
-  const deleteItem = async (id) => {
-    if (!window.confirm("Delete this item?")) return;
-    await api.delete(`/menu/${id}`);
-    fetchMenu();
+  const fetchOrders = async () => {
+    const res = await api.get("/orders", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setOrders(Array.isArray(res.data) ? res.data.slice(0, 5) : []);
   };
 
   useEffect(() => {
     fetchMenu();
     fetchStats();
+    fetchOrders();
   }, []);
 
+  /* -------- Today's Menu Group -------- */
+  const today = new Date().toLocaleString("en-US", { weekday: "long" });
+  const todaysMenu = menu.filter((i) => i.day === today);
+
+  const breakfastMenu = todaysMenu.filter((i) => i.mealSlot === "breakfast");
+  const lunchMenu = todaysMenu.filter((i) => i.mealSlot === "lunch");
+  const snacksMenu = todaysMenu.filter((i) => i.mealSlot === "snacks");
+
+  /* -------- Sales Chart -------- */
+  const chartData = [
+    { name: "Breakfast", revenue: stats.breakfast || 0 },
+    { name: "Lunch", revenue: stats.lunch || 0 },
+    { name: "Snacks & Beverages", revenue: stats.snacks || 0 },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#f6f7fb] flex">
-      {/* MOBILE OVERLAY */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-40 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <div className="min-h-screen bg-gray-50">
+      {/* MOBILE HEADER */}
+      <div className="md:hidden bg-white border-b px-4 py-3 flex items-center gap-3">
+        <Menu size={20} />
+        <h1 className="font-semibold">Admin Dashboard</h1>
+      </div>
 
-      
-
-      {/* MAIN */}
-      <main className="flex-1 w-full">
-        {/* MOBILE HEADER */}
-        <div className="md:hidden bg-white shadow p-4 flex items-center gap-4">
-          <Menu
-            className="cursor-pointer"
-            onClick={() => setSidebarOpen(true)}
-          />
-          <h1 className="font-bold text-lg">Admin Dashboard</h1>
+      <main className="p-4 md:p-6 space-y-8">
+        {/* KPI CARDS */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <StatCard title="Total Orders Today" value={stats.totalOrders} icon="📋" />
+          <StatCard title="Total Revenue Today" value={`₹${stats.totalRevenue || 0}`} icon="💰" />
+          <StatCard title="Breakfast Orders" value={stats.breakfast || 0} icon="☀️" />
+          <StatCard title="Lunch Orders" value={stats.lunch || 0} icon="🍔" />
+          <StatCard title="Snacks Orders" value={stats.snacks || 0} icon="☕" />
         </div>
 
-        <div className="p-4 md:p-6">
-          {/* STATS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatCard title="Total Products" value={menu.length} />
-            <StatCard title="Orders" value={stats.totalOrders} />
-            <StatCard
-              title="Revenue"
-              value={`₹${stats.totalRevenue}`}
-            />
-            <StatCard title="Sales" value={stats.totalSales} />
-          </div>
+        {/* MAIN GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* TODAY MENU */}
+          <Section title="Today's Menu">
+            <div className="space-y-3">
+              <MenuGroup title="Breakfast" items={breakfastMenu} />
+              <MenuGroup title="Lunch" items={lunchMenu} />
+              <MenuGroup title="Snacks & Beverages" items={snacksMenu} />
+            </div>
+          </Section>
 
-          {/* MENU TABLE */}
-          <div className="bg-white rounded-xl shadow p-4 md:p-6 overflow-x-auto">
-            <h2 className="font-bold text-lg mb-4">
-              Menu Management
-            </h2>
-
-            <table className="w-full min-w-[600px] text-sm">
-              <thead>
-                <tr className="border-b text-gray-500">
-                  <th className="py-2 text-left">Item</th>
-                  <th>Price</th>
-                  <th>Status</th>
-                  <th className="text-center">Action</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {menu.map((item) => (
-                  <tr key={item._id} className="border-b">
-                    <td className="py-3 font-medium">
-                      {item.name}
-                    </td>
-                    <td>₹{item.price}</td>
-
-                    {/* STATUS */}
-                    <td>
-                      <label className="inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={item.isAvailable}
-                          onChange={(e) =>
-                            toggleStatus(
-                              item._id,
-                              e.target.checked
-                            )
-                          }
-                          className="sr-only peer"
-                        />
-                        <div className="w-10 h-5 bg-gray-300 peer-checked:bg-green-500 rounded-full relative">
-                          <div className="w-4 h-4 bg-white absolute top-0.5 left-0.5 rounded-full peer-checked:translate-x-5 transition"></div>
-                        </div>
-                      </label>
-                    </td>
-
-                    {/* ACTION */}
-                    <td className="text-center">
-                      <button
-                        onClick={() =>
-                          deleteItem(item._id)
-                        }
-                        className="text-red-600 text-xs hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {menu.length === 0 && (
-              <p className="text-center text-gray-500 mt-6">
-                No menu items added yet
-              </p>
-            )}
-          </div>
+          {/* RECENT ORDERS */}
+          <Section title="Recent Orders">
+            <ul className="divide-y">
+              {orders.map((o) => (
+                <li key={o.id} className="py-2 flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">#{o.id}</p>
+                    <p className="text-xs text-gray-500">{o.user?.name || "User"}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold">₹{o.totalAmount}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        o.status === "collected"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {o.status}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Section>
         </div>
+
+        {/* SALES OVERVIEW */}
+        <Section title="Sales Overview">
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={chartData}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="revenue" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Section>
       </main>
     </div>
   );
 }
 
-/* NAV ITEM */
-function NavItem({ children, active }) {
+/* -------- Helpers -------- */
+function MenuGroup({ title, items }) {
   return (
-    <div
-      className={`px-4 py-2 rounded cursor-pointer transition
-        ${
-          active
-            ? "bg-orange-600"
-            : "hover:bg-orange-600"
-        }`}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* STAT CARD */
-function StatCard({ title, value }) {
-  return (
-    <div className="bg-white rounded-xl shadow p-5">
-      <p className="text-sm text-gray-500">{title}</p>
-      <h3 className="text-2xl font-bold mt-2">{value}</h3>
+    <div>
+      <h3 className="font-semibold mb-1">{title}</h3>
+      {items.length === 0 ? (
+        <p className="text-xs text-gray-400">No items</p>
+      ) : (
+        <ul className="list-disc list-inside text-sm text-gray-700">
+          {items.map((i) => (
+            <li key={i.id}>
+              {i.name} – ₹{i.price}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

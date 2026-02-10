@@ -1,67 +1,34 @@
 import express from "express";
 import multer from "multer";
-import fs from "fs";
-import path from "path";
 import Menu from "../models/Menu.js";
 
 const router = express.Router();
+const upload = multer({ dest: "uploads" });
 
-/* ================= MULTER CONFIG ================= */
-const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
-const upload = multer({ storage });
-
-/* ================= CREATE MENU ================= */
 router.post("/", upload.single("image"), async (req, res) => {
   try {
-    const { name, price, category } = req.body;
+    const { name, price, category, description, day, mealSlot } = req.body;
 
     const menu = await Menu.create({
       name,
-      price,
+      price: Number(price),
       category,
-      image: req.file ? `/uploads/${req.file.filename}` : "",
+      description,
+      day,
+      mealSlot,
+      image: req.file ? `/uploads/${req.file.filename}` : null,
     });
 
     res.status(201).json(menu);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (e) {
+    console.error("❌ Menu insert failed:", e);
+    res.status(500).json({ message: e.message });
   }
 });
 
-/* ================= GET MENU ================= */
 router.get("/", async (req, res) => {
-  const menu = await Menu.find();
-  res.json(menu);
-});
-
-/* ================= DELETE MENU (FIXED) ================= */
-router.delete("/:id", async (req, res) => {
-  try {
-    const item = await Menu.findById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ message: "Item not found" });
-    }
-
-    /* DELETE IMAGE FILE */
-    if (item.image) {
-      const imagePath = path.join(process.cwd(), item.image);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
-    }
-
-    await Menu.findByIdAndDelete(req.params.id);
-
-    res.json({ message: "Item deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  const rows = await Menu.findAll({ order: [["createdAt", "DESC"]] });
+  res.json(rows);
 });
 
 export default router;
